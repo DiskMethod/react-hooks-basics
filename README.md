@@ -1,6 +1,11 @@
 # React Hooks Basics For Udemy Tutorial (React - The Complete Guide)
 
-This project contains my own solution for Assignment 6 found in ./src/components/Ingredients.js
+My own solution for Assignment 6 found in ./src/components/Ingredients.js
+
+This project is a simple grocery/ingredients list manager that use Firebase for the backend
+and a plethora of react hooks like: useState, useEffect, useCallback, and useRef.
+
+This follow-along project comes from [https://www.udemy.com/course/react-the-complete-guide-incl-redux/](https://www.udemy.com/course/react-the-complete-guide-incl-redux/) but with my code changes. The original project does not include axios, async/await, error handling, and a few other logic changes; along with this I also added comments to explain the hooks I used.
 
 ## Available Scripts
 
