@@ -1,10 +1,10 @@
-import axios from "axios";
 import React, { useReducer, useEffect, useCallback, useMemo } from "react";
 
 import IngredientForm from "./IngredientForm";
 import IngredientList from "./IngredientList";
 import ErrorModal from "../UI/ErrorModal";
 import Search from "./Search";
+import useHttp from "../../hooks/http";
 
 const ingredientReducer = (currentIngredients, action) => {
   switch (action.type) {
@@ -19,32 +19,9 @@ const ingredientReducer = (currentIngredients, action) => {
   }
 };
 
-const httpReducer = (httpState, action) => {
-  switch (action.type) {
-    case "SEND":
-      return { loading: true, error: null };
-    case "RESPONSE":
-      return { ...httpState, loading: false };
-    case "RESET":
-      return { ...httpState, error: null };
-    case "ERROR":
-      return { loading: false, error: action.error };
-    default:
-      throw new Error("Should not be here!");
-  }
-};
-
 function Ingredients() {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null,
-  });
-  const { loading, error } = httpState;
-
-  useEffect(() => {
-    console.log("RENDERING INGREDIENTS", userIngredients);
-  }, [userIngredients]);
+  const [sendRequest, loading, error, data, extra] = useHttp();
 
   // Updates DOM depending on search value
   // We need the useCallback hook so that this handler survives
@@ -60,47 +37,42 @@ function Ingredients() {
   }, []);
 
   // Sends a post request to firebase and updates state
-  const addIngredientHandler = useCallback(async (ingredient) => {
-    try {
-      dispatchHttp({ type: "SEND" });
-      const response = await axios.post("/ingredients.json", ingredient);
-      dispatchHttp({ type: "RESPONSE" });
+  const addIngredientHandler = useCallback(
+    (ingredient) => {
+      sendRequest("/ingredients.json", "post", ingredient);
+    },
+    [sendRequest]
+  );
+
+  // Sends a delete request to firebase and updates state
+  const removeIngredientHandler = useCallback(
+    (id) => {
+      sendRequest(`/ingredients/${id}.json`, "delete", null, id);
+    },
+    [sendRequest]
+  );
+
+  useEffect(() => {
+    if (extra) {
+      dispatch({
+        type: "DELETE",
+        id: extra,
+      });
+    } else if (data) {
       dispatch({
         type: "ADD",
         ingredient: {
-          id: response.data.name,
-          ...ingredient,
+          id: data.name,
+          amount: data.amount,
+          title: data.title,
         },
       });
-    } catch (error) {
-      dispatchHttp({
-        type: "ERROR",
-        error: error.message,
-      });
     }
-  }, []);
-
-  // Sends a delete request to firebase and updates state
-  const removeIngredientHandler = useCallback(async (id) => {
-    try {
-      dispatchHttp({ type: "SEND" });
-      await axios.delete(`/ingredients/${id}.json`);
-      dispatchHttp({ type: "RESPONSE" });
-      dispatch({
-        type: "DELETE",
-        id,
-      });
-    } catch (error) {
-      dispatchHttp({
-        type: "ERROR",
-        error: error.message,
-      });
-    }
-  }, []);
+  }, [data, extra]);
 
   const clearError = useCallback(() => {
-    dispatchHttp({ type: "RESET" });
-  }, []);
+    error.clear({ type: "RESET" });
+  }, [error]);
 
   const ingredientList = useMemo(() => {
     return (
@@ -113,7 +85,7 @@ function Ingredients() {
 
   return (
     <div className="App">
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
+      {error && <ErrorModal onClose={clearError}>{error.message}</ErrorModal>}
 
       <IngredientForm
         onAddIngredient={addIngredientHandler}
